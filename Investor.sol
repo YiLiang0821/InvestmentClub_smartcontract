@@ -3,7 +3,7 @@ import "./SafeMath.sol";
 contract Investor {
     
     address STOInstance;
-    constructor (address STO) public {
+    constructor (address STO) public payable{
         STOInstance = STO;
     }
     
@@ -17,7 +17,6 @@ contract Investor {
         address addr;
         bool isInvest;
     }
-    uint dividendsRatio = 100; // stock dividens for investors.
     address[] allInvestor;
     uint InvestVotenumber;
     uint DistributeVotenumber;
@@ -25,17 +24,12 @@ contract Investor {
     mapping (address => uint) userToId;
     mapping (uint => address) idToAddr;
     mapping (address => User) public users;
-    uint FundPool;
+    uint  FundPool;
     struct Vote{
         uint Yes;
         uint No; 
     }
     Vote public VoteCondition;
-    
-     modifier CheckUser(uint YourIndex){
-        require(userToId[msg.sender] == YourIndex);
-        _;
-    }
     
     function register(string _name,string _email) public returns(uint){
         require(userToId[msg.sender] == 0 ,"Your ID already exist");
@@ -105,12 +99,14 @@ contract Investor {
             // transfer Money to Bank contract;
             STOInstance.transfer(FundPool);
             InvestVotenumber = 0;
+            VoteCondition.Yes = 0;
+            VoteCondition.No = 0;
         }
         return VoteCondition.Yes;
         return VoteCondition.No;
     }
     
-    function VoteToDistribute(uint YourIndex, uint YesFor1_or_NoFor0) external returns(uint){
+    function VoteToDistribute(uint YourIndex, uint YesFor1_or_NoFor0) external payable returns(uint){
         require(userToId[msg.sender] == YourIndex);
         require(users[idToAddr[YourIndex]].voted ==1);       //make sure voter have right
         require(YesFor1_or_NoFor0 == 1 || YesFor1_or_NoFor0 == 0 );
@@ -124,15 +120,35 @@ contract Investor {
         DistributeVotenumber +=1;
         if(allInvestor.length == DistributeVotenumber && (VoteCondition.Yes-VoteCondition.No) > 0){  //多數決
             // distribute Money to Investors
-            getDividendsValue();
-            DistributeVotenumber = 0;
+            uint funds = address(this).balance;
+                for(uint i= 1; i < allInvestor.length+1; i++){
+                    users[idToAddr[i]].profit = funds * SafeMath.percent(users[idToAddr[i]].money, FundPool, 3) / 1000;
+                }
+                for(uint u = 1; u < allInvestor.length+1; u++){
+                    users[idToAddr[u]].addr.transfer(users[idToAddr[u]].profit);
+                }
             
+            //getDividendsValue();
+            DistributeVotenumber = 0;
+            VoteCondition.Yes = 0;
+            VoteCondition.No = 0;
         }
         return VoteCondition.Yes;
         return VoteCondition.No;
     }
-    
-    
+    /*
+    function getDividendsValue() public payable returns(bool) 
+    {
+        uint funds = address(this).balance;
+        for(uint i= 1; i < allInvestor.length+1; i++){
+            users[idToAddr[i]].profit = funds * SafeMath.percent(users[idToAddr[i]].money, FundPool, 3) / 1000;
+        }
+        for(uint u = 1; u < allInvestor.length+1; u++){
+            users[idToAddr[u]].addr.transfer(users[idToAddr[u]].profit);
+        }
+        return true;
+    }
+    */
     function CheckFundPool() public view returns(uint){
         return address(this).balance;
     }
@@ -145,20 +161,8 @@ contract Investor {
         }
     }
     
-    function getDividendsValue() internal returns(bool) 
-    {
-        uint funds = address(this).balance;
-        for(uint i= 1; i < allInvestor.length+1; i++){
-            users[idToAddr[i]].profit = funds * SafeMath.percent(users[idToAddr[i]].money, FundPool, 3) / 1000;
-        }
-        for(uint u = 1; u < allInvestor.length+1; i++){
-            idToAddr[u].transfer(users[idToAddr[u]].profit);
-        }
-        return true;
-    }
-    
     function GetProportion(uint YourIndex) public view returns(uint){
         return users[idToAddr[YourIndex]].profit;
     }
-    
+    function() payable{}
 }

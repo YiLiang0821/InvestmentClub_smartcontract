@@ -5,7 +5,7 @@ contract Divided{
     //address investorInstance;
     Investor investorInstance;
     
-    constructor(address investorAddress)public{
+    constructor(address investorAddress)public payable{
         investorInstance = Investor(investorAddress);
         investorInstance.RearrangeVote(); //Give right to vote about distribute
         
@@ -14,13 +14,12 @@ contract Divided{
         return investorInstance.CheckFundPool();
     }
     
-    function Proportion_(uint index) view public returns(uint){
-        investorInstance.GetProportion(index);
+    function GetProfit() view public returns(uint){
+        return address(this).balance;
     }
     
-    function VoteToDistribution(uint index, uint Yes1_or_No0) public returns(uint){
-        investorInstance.RearrangeVote(); //Give right to vote about distribute
+    function VoteToDistribution(uint index, uint Yes1_or_No0) public payable returns(uint){
         investorInstance.VoteToDistribute(index,Yes1_or_No0);
     }
-    
+    function() payable{}
 }
