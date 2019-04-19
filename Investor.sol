@@ -1,9 +1,9 @@
-pragma solidity^0.4.25;
+pragma solidity^0.5.0;
 import "./SafeMath.sol";
 contract Investor {
     
-    address STOInstance;
-    constructor (address STO) public payable{
+    address payable STOInstance;
+    constructor (address payable STO) public payable{
         STOInstance = STO;
     }
     
@@ -12,26 +12,26 @@ contract Investor {
         string email;
         uint money; // the amount on investment
         uint voted; // the right to vote
-        uint profit;
+        //uint profit;
         bool valid; // Is the account valid
-        address addr;
+        address payable addr;
         bool isInvest;
     }
     address[] allInvestor;
     uint InvestVotenumber;
     uint DistributeVotenumber;
     uint private userId; //User[] users 會面臨到一個問題，就是id如何確認，就算用一個參數來記錄id，會是從1開始，而不是從0開始，除非有處理差異值
-    mapping (address => uint) userToId;
-    mapping (uint => address) idToAddr;
+    mapping (address => uint) public userToId;
+    mapping (uint => address payable) public idToAddr;
     mapping (address => User) public users;
-    uint  FundPool;
+    uint public FundPool;
     struct Vote{
         uint Yes;
         uint No; 
     }
     Vote public VoteCondition;
     
-    function register(string _name,string _email) public returns(uint){
+    function register(string memory _name,string memory _email) public returns(uint){
         require(userToId[msg.sender] == 0 ,"Your ID already exist");
         userId++;
         idToAddr[userId] = msg.sender;
@@ -41,7 +41,7 @@ contract Investor {
             email: _email,
             money: 0,
             voted: 0,
-            profit: 0,
+            //profit: 0,
             valid: false,
             isInvest: false,
             addr: msg.sender
@@ -79,11 +79,7 @@ contract Investor {
         return users[idToAddr[YourIndex]].money;
     }
     
-    function getInvestors() public view returns(address[]){
-        return allInvestor;
-    }
-    
-    function VoteToInvest(uint YourIndex, uint YesFor1_or_NoFor0) public payable returns(uint){
+    function VoteToInvest(uint YourIndex, uint YesFor1_or_NoFor0) public payable returns(bool){
         require(userToId[msg.sender] == YourIndex);
         require(users[idToAddr[YourIndex]].voted ==1);       //make sure voter have right
         require(YesFor1_or_NoFor0 == 1 || YesFor1_or_NoFor0 == 0 );
@@ -102,11 +98,10 @@ contract Investor {
             VoteCondition.Yes = 0;
             VoteCondition.No = 0;
         }
-        return VoteCondition.Yes;
-        return VoteCondition.No;
+        return true;
     }
-    
-    function VoteToDistribute(uint YourIndex, uint YesFor1_or_NoFor0) external payable returns(uint){
+/*    
+    function VoteToDistribute(uint YourIndex, uint YesFor1_or_NoFor0) external payable returns(bool){
         require(userToId[msg.sender] == YourIndex);
         require(users[idToAddr[YourIndex]].voted ==1);       //make sure voter have right
         require(YesFor1_or_NoFor0 == 1 || YesFor1_or_NoFor0 == 0 );
@@ -127,28 +122,14 @@ contract Investor {
                 for(uint u = 1; u < allInvestor.length+1; u++){
                     users[idToAddr[u]].addr.transfer(users[idToAddr[u]].profit);
                 }
-            
-            //getDividendsValue();
             DistributeVotenumber = 0;
             VoteCondition.Yes = 0;
             VoteCondition.No = 0;
         }
-        return VoteCondition.Yes;
-        return VoteCondition.No;
-    }
-    /*
-    function getDividendsValue() public payable returns(bool) 
-    {
-        uint funds = address(this).balance;
-        for(uint i= 1; i < allInvestor.length+1; i++){
-            users[idToAddr[i]].profit = funds * SafeMath.percent(users[idToAddr[i]].money, FundPool, 3) / 1000;
-        }
-        for(uint u = 1; u < allInvestor.length+1; u++){
-            users[idToAddr[u]].addr.transfer(users[idToAddr[u]].profit);
-        }
         return true;
+        
     }
-    */
+*/
     function CheckFundPool() public view returns(uint){
         return address(this).balance;
     }
@@ -161,8 +142,22 @@ contract Investor {
         }
     }
     
-    function GetProportion(uint YourIndex) public view returns(uint){
-        return users[idToAddr[YourIndex]].profit;
+    function() external payable{}
+    //Get Function
+    function GetuserToId(address _add) external view returns(uint){
+        return userToId[_add];
     }
-    function() payable{}
+    function GetidToAddr(uint i) external  payable returns(address payable){
+        return users[idToAddr[i]].addr;
+    }
+    function GetUser_Votes(address _add) external view returns(uint){
+        return  users[_add].voted;
+    }
+    function GetUser_Money(address _add) external view returns(uint){
+        return  users[_add].money;
+    }
+    function GetInvestors() public view returns(address[] memory){
+        return allInvestor;
+    }
+
 }

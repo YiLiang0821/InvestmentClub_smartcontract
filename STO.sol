@@ -1,13 +1,13 @@
-pragma solidity^0.4.25;
+pragma solidity^0.5.0;
 
 contract STO{
-    constructor() {
+    constructor() public{
         
     }
-    function getBalance() view returns(uint){
-      return this.balance;
+    function getBalance() view public returns(uint){
+      return address(this).balance;
     } 
     
-    function() payable {
+    function() external payable {
     }
 }
