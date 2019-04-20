@@ -12,7 +12,7 @@ contract Investor {
         string email;
         uint money; // the amount on investment
         uint voted; // the right to vote
-        //uint profit;
+        uint profit;
         bool valid; // Is the account valid
         address payable addr;
         bool isInvest;
@@ -41,7 +41,7 @@ contract Investor {
             email: _email,
             money: 0,
             voted: 0,
-            //profit: 0,
+            profit: 0,
             valid: false,
             isInvest: false,
             addr: msg.sender
@@ -158,6 +158,12 @@ contract Investor {
     }
     function GetInvestors() public view returns(address[] memory){
         return allInvestor;
+    }
+    function UpdateVote(uint index) external  returns(uint){
+        return users[idToAddr[index]].voted = 0;
+    }
+    function UpdateProfit(uint index, uint theProfit) external returns(uint){
+        return users[idToAddr[index]].profit = theProfit;
     }
 
 }

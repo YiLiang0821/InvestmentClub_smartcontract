@@ -34,19 +34,20 @@ contract Divided{
         else{
             VoteCondition.No += 1;
         }
-        //investorInstance.GetUser_Votes(msg.sender) = 0; //投票權歸0，無法更改import合約的值
+        investorInstance.UpdateVote(YourIndex); //Voted_right = 0
         VotetoDivide +=1;
         if(investorInstance.GetInvestors().length == VotetoDivide && (VoteCondition.Yes-VoteCondition.No) > 0){  //多數決
             // distribute Money to Investors
             uint funds = address(this).balance;
-            /*
+            
                 for(uint i= 1; i < investorInstance.GetInvestors().length+1; i++){
-                    investorInstance.GetUser_Profit(investorInstance.GetidToAddr(i)) = funds * SafeMath.percent(investorInstance.GetUser_Money(investorInstance.GetidToAddr(YourIndex)), investorInstance.FundPool(), 3) / 1000;
-                }
-            */
-                for(uint u = 1; u < investorInstance.GetInvestors().length+1; u++){
                     
-                    investorInstance.GetidToAddr(u).transfer(funds * SafeMath.percent(investorInstance.GetUser_Money(investorInstance.GetidToAddr(u)), investorInstance.FundPool(), 3) / 1000);
+                }
+            
+                for(uint u = 1; u < investorInstance.GetInvestors().length+1; u++){
+                    uint temp_profit = funds * SafeMath.percent(investorInstance.GetUser_Money(investorInstance.GetidToAddr(u)), investorInstance.FundPool(), 3) / 1000;
+                    investorInstance.UpdateProfit(u, temp_profit);
+                    investorInstance.GetidToAddr(u).transfer(temp_profit);
                 }
             VotetoDivide = 0;
             VoteCondition.Yes = 0;
