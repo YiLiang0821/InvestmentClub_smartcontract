@@ -20,7 +20,8 @@ contract Investor {
     address[] allInvestor;
     uint InvestVotenumber;
     uint DistributeVotenumber;
-    uint private userId; 
+    uint private userId; //User[] users 會面臨到一個問題，就是id如何確認，就算用一個參數來記錄id，會是從1開始，而不是從0開始，除非有處理差異值
+    mapping (address => uint) public userToId;
     mapping (uint => address payable) public idToAddr;
     mapping (address => User) public users;
     uint public FundPool;
@@ -71,7 +72,7 @@ contract Investor {
             users[idToAddr[YourIndex]].money = users[idToAddr[YourIndex]].money -  withdrawAmount * SafeMath.percent(10,100,3)/1000;
             idToAddr[YourIndex].transfer(withdrawAmount);
             
-            if(users[idToAddr[YourIndex]].money == 0){               
+            if(users[idToAddr[YourIndex]].money == 0){               //全部領完
                 users[idToAddr[YourIndex]].valid = false;
             }
             FundPool -= withdrawAmount;
@@ -89,9 +90,9 @@ contract Investor {
         else{
             VoteCondition.No += 1;
         }
-        users[idToAddr[YourIndex]].voted = 0; //Vote right to be 0
+        users[idToAddr[YourIndex]].voted = 0; //投票權歸0
         InvestVotenumber +=1;
-        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) > 0){  //Majority decision
+        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) > 0){  //多數決
             // transfer Money to Bank contract;
             STOInstance.transfer(FundPool);
             InvestVotenumber = 0;
