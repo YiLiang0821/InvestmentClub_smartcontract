@@ -1,17 +1,18 @@
 pragma solidity^0.5.0;
 import "./SafeMath.sol";
 contract Investor {
-    
+    /*
     address payable STOInstance;
     constructor (address payable STO) public payable{
         STOInstance = STO;
     }
+    */
     
     struct User{
         string name;
         string email;
         uint money; // the amount on investment
-        uint voted; // the right to vote
+        uint voted; // the right to select target
         uint profit;
         bool valid; // Is the account valid
         address payable addr;
@@ -20,11 +21,13 @@ contract Investor {
     address[] allInvestor;
     uint InvestVotenumber;
     uint DistributeVotenumber;
-    uint private userId; //User[] users 會面臨到一個問題，就是id如何確認，就算用一個參數來記錄id，會是從1開始，而不是從0開始，除非有處理差異值
+    uint private userId; 
     mapping (address => uint) public userToId;
     mapping (uint => address payable) public idToAddr;
     mapping (address => User) public users;
     uint public FundPool;
+    
+    bool VoteResult;
     struct Vote{
         uint Yes;
         uint No; 
@@ -59,28 +62,14 @@ contract Investor {
         
         if(users[idToAddr[YourIndex]].isInvest == false) {
             allInvestor.push(idToAddr[YourIndex]);
-            users[idToAddr[YourIndex]].isInvest == true;
+            users[idToAddr[YourIndex]].isInvest = true;
         }
         return true;
     }
     
-    function withdraw(uint YourIndex, uint withdrawAmount) payable public returns(uint){
-        require(userToId[msg.sender] == YourIndex);
-        require(withdrawAmount <= users[idToAddr[YourIndex]].money );
-        if (users[idToAddr[YourIndex]].money >= withdrawAmount){
-            users[idToAddr[YourIndex]].money -= withdrawAmount;
-            users[idToAddr[YourIndex]].money = users[idToAddr[YourIndex]].money -  withdrawAmount * SafeMath.percent(10,100,3)/1000;
-            idToAddr[YourIndex].transfer(withdrawAmount);
-            
-            if(users[idToAddr[YourIndex]].money == 0){               //全部領完
-                users[idToAddr[YourIndex]].valid = false;
-            }
-            FundPool -= withdrawAmount;
-        }    
-        return users[idToAddr[YourIndex]].money;
-    }
     
-    function VoteToInvest(uint YourIndex, uint YesFor1_or_NoFor0) public payable returns(bool){
+    
+    function VoteToTarget(uint YourIndex, uint YesFor1_or_NoFor0) public payable returns(bool){
         require(userToId[msg.sender] == YourIndex);
         require(users[idToAddr[YourIndex]].voted ==1);       //make sure voter have right
         require(YesFor1_or_NoFor0 == 1 || YesFor1_or_NoFor0 == 0 );
@@ -92,15 +81,47 @@ contract Investor {
         }
         users[idToAddr[YourIndex]].voted = 0; //投票權歸0
         InvestVotenumber +=1;
-        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) > 0){  //多數決
-            // transfer Money to Bank contract;
-            STOInstance.transfer(FundPool);
+        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) >= 0){  //多數決
+            VoteResult = true;
             InvestVotenumber = 0;
-            VoteCondition.Yes = 0;
-            VoteCondition.No = 0;
+        }
+        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) < 0){
+            VoteResult = false; //fail to have an investment target
+            InvestVotenumber = 0;
+            // revet money to investors
+            for(uint i = 1; i<allInvestor.length + 1; i ++){
+                users[idToAddr[i]].addr.transfer(users[idToAddr[i]].money);
+            }
         }
         return true;
     }
+    
+    
+    function withdraw(uint YourIndex, uint withdrawAmount) payable public returns(uint){
+        require(userToId[msg.sender] == YourIndex);
+        require(withdrawAmount <= users[idToAddr[YourIndex]].money );
+        require(VoteResult == true);
+        
+        
+        if (users[idToAddr[YourIndex]].money >= withdrawAmount){
+        users[idToAddr[YourIndex]].money -= withdrawAmount; // 調整所佔比例
+        FundPool -= withdrawAmount;
+        withdrawAmount = withdrawAmount * SafeMath.percent(70,100,3)/1000;
+            
+        //users[idToAddr[YourIndex]].money = users[idToAddr[YourIndex]].money -  withdrawAmount * SafeMath.percent(30,100,3)/1000;
+        idToAddr[YourIndex].transfer(withdrawAmount);
+            
+            if(users[idToAddr[YourIndex]].money == 0){               //全部領完
+                users[idToAddr[YourIndex]].valid = false;
+            }
+            
+        } 
+        
+        
+        return users[idToAddr[YourIndex]].money;
+    }
+    
+    
     function CheckFundPool() public view returns(uint){
         return address(this).balance;
     }
