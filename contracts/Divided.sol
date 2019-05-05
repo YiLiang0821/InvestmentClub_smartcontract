@@ -11,12 +11,12 @@ contract Divided{
     
     uint VotetoDivide = 0;
     struct Vote{
-        uint Yes;
-        uint No; 
+        int Yes;
+        int No; 
     }
     Vote public VoteCondition;
     
-    
+
     function ReVote() public returns(bool){
         investorInstance.RearrangeVote(); //Give right to vote about distribute
     }
@@ -39,11 +39,6 @@ contract Divided{
         if(investorInstance.GetInvestors().length == VotetoDivide && (VoteCondition.Yes-VoteCondition.No) > 0){  //多數決
             // distribute Money to Investors
             uint funds = address(this).balance;
-            
-                for(uint i= 1; i < investorInstance.GetInvestors().length+1; i++){
-                    
-                }
-            
                 for(uint u = 1; u < investorInstance.GetInvestors().length+1; u++){
                     uint temp_profit = funds * SafeMath.percent(investorInstance.GetUser_Money(investorInstance.GetidToAddr(u)), investorInstance.FundPool(), 3) / 1000;
                     investorInstance.UpdateProfit(u, temp_profit);

@@ -1,12 +1,16 @@
 pragma solidity^0.5.0;
 import "./SafeMath.sol";
 contract Investor {
-    /*
-    address payable STOInstance;
-    constructor (address payable STO) public payable{
-        STOInstance = STO;
+    
+    
+    constructor () public {
+        
     }
-    */
+    
+    address payable STOInstance;
+    uint threshold;
+    uint punishment;
+    int majority;
     
     struct User{
         string name;
@@ -27,10 +31,10 @@ contract Investor {
     mapping (address => User) public users;
     uint public FundPool;
     
-    bool VoteResult;
+    bool public VoteResult;
     struct Vote{
-        uint Yes;
-        uint No; 
+        int Yes;
+        int No; 
     }
     Vote public VoteCondition;
     
@@ -58,13 +62,27 @@ contract Investor {
         users[idToAddr[YourIndex]].voted = 1;
         users[idToAddr[YourIndex]].valid = true;
         users[idToAddr[YourIndex]].money += msg.value;
-        FundPool +=users[idToAddr[YourIndex]].money;
+        FundPool +=msg.value;
         
         if(users[idToAddr[YourIndex]].isInvest == false) {
             allInvestor.push(idToAddr[YourIndex]);
             users[idToAddr[YourIndex]].isInvest = true;
         }
         return true;
+    }
+    
+    function InvestTarget(address payable STO_, uint threshold_, uint PenaltyRatio) public returns(bool){
+        require(VoteResult == false);
+        STOInstance = STO_;
+        threshold = threshold_;
+        punishment = PenaltyRatio;
+        return true;
+    }
+    
+    function MoneyTransfer() public returns(bool){
+        require(majority > 0);
+        uint MoneyinPool = address(this).balance;
+        STOInstance.transfer(MoneyinPool);
     }
     
     
@@ -75,22 +93,30 @@ contract Investor {
         require(YesFor1_or_NoFor0 == 1 || YesFor1_or_NoFor0 == 0 );
         if(YesFor1_or_NoFor0 == 1){
             VoteCondition.Yes += 1;
+            majority += 1;
         }
         else{
             VoteCondition.No += 1;
         }
         users[idToAddr[YourIndex]].voted = 0; //投票權歸0
         InvestVotenumber +=1;
-        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) >= 0){  //多數決
-            VoteResult = true;
-            InvestVotenumber = 0;
-        }
-        if(allInvestor.length == InvestVotenumber && (VoteCondition.Yes-VoteCondition.No) < 0){
-            VoteResult = false; //fail to have an investment target
-            InvestVotenumber = 0;
-            // revet money to investors
-            for(uint i = 1; i<allInvestor.length + 1; i ++){
-                users[idToAddr[i]].addr.transfer(users[idToAddr[i]].money);
+        if(allInvestor.length == InvestVotenumber){
+            if((VoteCondition.No-VoteCondition.Yes) >= 0){
+                for(uint i = 1; i<allInvestor.length + 1; i ++){
+                idToAddr[i].transfer(users[idToAddr[i]].money);
+                }
+                VoteResult = false; //fail to have an investment target
+                InvestVotenumber = 0;
+                VoteCondition.Yes = 0;
+                VoteCondition.No = 0;
+                
+            }
+            else{
+                VoteResult = true;
+                InvestVotenumber = 0;
+                VoteCondition.Yes = 0;
+                VoteCondition.No = 0;
+                
             }
         }
         return true;
@@ -100,26 +126,46 @@ contract Investor {
     function withdraw(uint YourIndex, uint withdrawAmount) payable public returns(uint){
         require(userToId[msg.sender] == YourIndex);
         require(withdrawAmount <= users[idToAddr[YourIndex]].money );
-        require(VoteResult == true);
-        
-        
-        if (users[idToAddr[YourIndex]].money >= withdrawAmount){
-        users[idToAddr[YourIndex]].money -= withdrawAmount; // 調整所佔比例
-        FundPool -= withdrawAmount;
-        withdrawAmount = withdrawAmount * SafeMath.percent(70,100,3)/1000;
+        if(VoteResult == true){
+            if (users[idToAddr[YourIndex]].money >= withdrawAmount){
+            users[idToAddr[YourIndex]].money -= withdrawAmount; // 調整所佔比例
+            FundPool -= withdrawAmount;
+            withdrawAmount = withdrawAmount * SafeMath.percent((100-punishment),100,3)/1000;
+            idToAddr[YourIndex].transfer(withdrawAmount);
+            //users[idToAddr[YourIndex]].money = users[idToAddr[YourIndex]].money -  withdrawAmount * SafeMath.percent(30,100,3)/1000;
+                
+                if(users[idToAddr[YourIndex]].money == 0){               //全部領完
+                    users[idToAddr[YourIndex]].valid = false;
+                    majority -= 1;
+                }
+                
+                // fail to achive threshold
+                if(FundPool <= threshold){
+                    uint fundsAfterVoted = address(this).balance;
+                    for(uint u =1; u <allInvestor.length + 1; u ++){
+                        idToAddr[u].transfer(fundsAfterVoted * SafeMath.percent(users[idToAddr[u]].money,FundPool,3) / 1000);
+                    }
+                }
             
-        //users[idToAddr[YourIndex]].money = users[idToAddr[YourIndex]].money -  withdrawAmount * SafeMath.percent(30,100,3)/1000;
-        idToAddr[YourIndex].transfer(withdrawAmount);
             
-            if(users[idToAddr[YourIndex]].money == 0){               //全部領完
-                users[idToAddr[YourIndex]].valid = false;
             }
+        }
+        if(VoteResult == false){
+            if (users[idToAddr[YourIndex]].money >= withdrawAmount){
+            users[idToAddr[YourIndex]].money -= withdrawAmount; // 調整所佔比例
+            FundPool -= withdrawAmount;
+            idToAddr[YourIndex].transfer(withdrawAmount);
             
-        } 
-        
-        
+                if(users[idToAddr[YourIndex]].money == 0){               //全部領完
+                    users[idToAddr[YourIndex]].valid = false;
+                }
+            }
+        }
         return users[idToAddr[YourIndex]].money;
     }
+    
+
+    
     
     
     function CheckFundPool() public view returns(uint){
